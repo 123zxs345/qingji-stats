@@ -92,6 +92,25 @@ try {
   assert.equal(restoredSummary.total, expectedAfterUndo.total, `恢复后合计应为 ${expectedAfterUndo.total}，实际 ${restoredSummary.total}`);
   step('撤销以新事件写入并在恢复后生效', { before, after, targetId: undone.targetId, total: restoredSummary.total });
 
+  // 4b. 撤销后的状态再同步一次，必须幂等。
+  try {
+    await sync(restored);
+    const idempotentTags = (await allTags()).length;
+    assert.equal(idempotentTags, after, `撤销后重复同步新增了 ${idempotentTags - after} 条记录`);
+    step('撤销后的状态再同步仍然幂等', { tags: idempotentTags });
+  } catch (error) {
+    const cloud = await client.all(prefix);
+    const known = new Map(cloud.map(record => [record.tag, record.value]));
+    const diffs = [];
+    for (const record of toCloudRecords(restored, prefix)) {
+      const remote = known.get(record.tag);
+      if (!remote) diffs.push({ tag: record.tag.slice(prefix.length), issue: '云端缺少' });
+      else if (JSON.stringify(remote) !== JSON.stringify(record.value)) diffs.push({ tag: record.tag.slice(prefix.length), cloud: JSON.stringify(remote), local: JSON.stringify(record.value) });
+    }
+    report.idempotenceDiagnostics = { error: error.message, active: restored.active, diffs: diffs.slice(0, 6) };
+    throw error;
+  }
+
   // 5. 新建第二批：它成为当前批次后，事件同样要能同步并被恢复。
   const second = newBatch(restored, '第二批', { now: Date.now() });
   const withSecond = appendEntry(second, '2(30)', { now: Date.now() });
@@ -102,9 +121,11 @@ try {
   const restoredSecondSummary = summarize(currentBatch(restoredSecond));
   if (restoredSecondSummary.totals[1] !== 30) {
     const cloud = await client.all(prefix);
+    const stateRecords = cloud.filter(record => record.value.kind === 'state');
     report.secondBatchDiagnostics = {
       localSecondBatch: { id: currentBatch(withSecond).id, active: withSecond.active, events: currentBatch(withSecond).events.map(event => ({ id: event.id, kind: event.kind, entries: event.entries })) },
-      cloudQuantity: cloud.filter(record => record.value.mode === 'quantity').map(record => ({ tag: record.tag.slice(prefix.length), kind: record.value.kind, batchId: record.value.batchId, id: record.value.id, targetId: record.value.targetId, entries: record.value.entries })),
+      cloudStateRecords: stateRecords.map(record => ({ tag: record.tag.slice(prefix.length), active: record.value.active })),
+      cloudAllKinds: cloud.map(record => `${record.tag.slice(prefix.length + 37)}:${record.value.kind}`),
       recoveredBatches: restoredSecond.batches.map(batch => ({ id: batch.id, mode: batch.mode, events: batch.events.length })),
       recoveredActive: restoredSecond.active,
       recoveredCurrent: { id: currentBatch(restoredSecond).id, totals: restoredSecondSummary.totals.filter(Boolean) }
