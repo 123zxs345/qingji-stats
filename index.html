@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f7f3">
+  <meta name="description" content="连续录入 1 到 50 的数字，自动统计次数或累计数量。一键汇总、复制，随时继续记。">
+  <title>轻记 · 数字统计</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js"></script>
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <svg aria-hidden="true" class="svg-defs" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M15 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8 4 3 9l5 5M3 9h10a7 7 0 0 1 0 14"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18H5a4 4 0 0 1-.5-8A7 7 0 0 1 18 9a4.5 4.5 0 0 1 1 9h-2M12 12v9m-3-6 3-3 3 3"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></symbol>
+  </svg>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="./" aria-label="轻记首页"><span class="brand-mark"><i></i><i></i><i></i></span><span>轻记<span class="brand-sub">数字小账本</span></span></a>
+      <button class="sync-button" id="sync-button" title="同步云端数据"><span class="status-dot"></span><span id="sync-text">已保存到本机</span><svg class="icon"><use href="#i-cloud"/></svg></button>
+    </header>
+
+    <div class="intro"><div class="eyebrow">少一点整理，多一点轻松</div><h1>随手记，<span>一键汇总。</span></h1><p>零散的数字，交给轻记就好。</p></div>
+
+    <div class="mode-switch" role="group" aria-label="统计模式">
+      <button data-mode="quantity" aria-pressed="true"><span class="mode-symbol">∑</span><span>数量累加<small>把每个编号的数量加起来</small></span></button>
+      <button data-mode="frequency" aria-pressed="false"><span class="mode-symbol">#</span><span>次数统计<small>数一数每个编号出现几次</small></span></button>
+    </div>
+
+    <section class="overview" aria-label="当前统计">
+      <div class="overview-top"><span><span class="live-dot"></span>当前批次</span><div class="batch-picker"><select id="batch-select" aria-label="选择统计批次"></select><span>⌄</span></div></div>
+      <div class="total-label" id="total-label">累计数量</div>
+      <div class="total-number"><strong id="grand-total">0</strong><span id="total-unit">个</span><div class="spark-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="overview-bottom"><span>已记 <b id="record-count">0</b> 笔<span class="overview-divider"></span>覆盖 <b id="covered-count">0</b> / 50 个编号</span><button id="new-batch"><svg class="icon"><use href="#i-plus"/></svg>新建一批</button></div>
+    </section>
+
+    <main class="workspace">
+      <section class="card input-card">
+        <div class="card-heading"><h2>记一笔</h2><span class="range-tag">编号 1—50</span></div>
+        <p class="input-hint" id="input-hint">输入编号和数量，支持空格、逗号或换行。</p>
+        <label class="sr-only" for="data-input">录入数据</label>
+        <textarea id="data-input" rows="4" placeholder="1(100) 2(50)&#10;1(88) 2(896)" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+        <div class="input-bottom"><span id="format-hint">格式：编号(数量)</span><button id="example-button" class="text-button">试试示例 <span>↗</span></button></div>
+        <div id="input-preview" class="input-preview" aria-live="polite"></div>
+        <button id="save-button" class="primary-button" disabled><span>保存这一笔</span><svg class="icon"><use href="#i-arrow"/></svg></button>
+        <div class="input-actions"><span><svg class="icon"><use href="#i-check"/></svg>保存后自动更新汇总</span><button id="undo-button" class="text-button" disabled><svg class="icon"><use href="#i-undo"/></svg>撤销上一笔</button></div>
+      </section>
+
+      <section class="card result-card">
+        <div class="result-heading"><div class="result-tabs" role="tablist" aria-label="统计内容"><button id="summary-tab" role="tab" aria-selected="true" aria-controls="summary-panel">汇总结果<span id="result-count">0</span></button><button id="history-tab" role="tab" aria-selected="false" aria-controls="history-panel">录入记录</button></div><button id="copy-button" class="copy-button" disabled><svg class="icon"><use href="#i-copy"/></svg><span>复制</span></button></div>
+        <div id="summary-panel" role="tabpanel" aria-labelledby="summary-tab">
+          <div class="table-heading"><span>编号</span><button id="sort-button" title="切换排序方式">累计数量 <span>↓</span></button></div>
+          <div id="summary-list" class="summary-list"></div>
+          <div id="summary-empty" class="empty-state"><div class="empty-illustration" aria-hidden="true"><span></span><span></span><span></span><i>+</i></div><h3>从第一笔开始</h3><p>录入后，每个编号的汇总会出现在这里。</p><button class="text-button" id="empty-example">用示例试一下 <span>↗</span></button></div>
+          <button id="show-all-button" class="show-all-button">查看全部 50 个编号 <span>⌄</span></button>
+          <div id="insight" class="insight" hidden></div>
+        </div>
+        <div id="history-panel" role="tabpanel" aria-labelledby="history-tab" hidden><div id="history-list" class="history-list"></div><div id="history-empty" class="empty-state"><h3>还没有录入记录</h3><p>每次保存和撤销，都会留下一条记录。</p></div></div>
+      </section>
+    </main>
+
+    <footer class="app-footer"><p><svg class="icon"><use href="#i-check"/></svg>关掉页面，下次回来继续记。</p><div><button id="export-button"><svg class="icon"><use href="#i-download"/></svg>导出备份</button><span>·</span><button id="import-button">导入备份</button><input type="file" id="import-file" accept="application/json,.json" hidden></div><small>两种模式分别保存 · 每个浏览器拥有独立记录</small></footer>
+  </div>
+
+  <dialog id="batch-dialog"><form id="batch-form"><span class="dialog-eyebrow">开始一份新的统计</span><h2>给这一批起个名字</h2><p>之前的记录会保留，可以随时切换查看。</p><label for="batch-name">批次名称</label><input id="batch-name" maxlength="30" required autocomplete="off"><div class="dialog-actions"><button type="button" id="cancel-batch" class="secondary-button">取消</button><button class="primary-button" type="submit">新建一批 <svg class="icon"><use href="#i-arrow"/></svg></button></div></form></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
