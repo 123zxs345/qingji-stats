@@ -24,21 +24,26 @@
 
 ## 开发与验证
 
+本目录本身就是一个独立的 git 仓库（分支 `main`），发布到 GitHub Pages 时以本目录为仓库根。下面的命令可以在本目录里直接运行；如果你想从项目根目录 `E:\微信小程序` 运行，把 `node ` 后面的路径换成 `sites/wechat-stats-demo/…`。
+
 ```powershell
 # 计算与云端同步的单元测试（Node 内置测试，无需安装依赖）
-node --test sites/wechat-stats-demo/tests/*.test.mjs
+node --test tests/*.test.mjs
 
 # 浏览器行为检查：375 / 390 像素布局、录入→汇总、刷新持久化、撤销、同步幂等、断网回退
-node sites/wechat-stats-demo/scripts/check-browser.mjs
+node scripts/check-browser.mjs
+
+# 检查构建产物本身（而不只是源码目录）
+$env:CHECK_ROOT = "$PWD/dist"; node scripts/check-browser.mjs; Remove-Item Env:CHECK_ROOT
 
 # 本机预览（仅监听 127.0.0.1:4176）
-node sites/wechat-stats-demo/scripts/preview.mjs
+node scripts/preview.mjs
 
 # 静态导出到 dist/
-node sites/wechat-stats-demo/scripts/build.mjs
+node scripts/build.mjs
 ```
 
-浏览器检查优先使用本机已安装的 Chrome，没有时退回 Playwright 自带 Chromium；截图输出到 `docs/screenshots/stats-demo-375.png` 和 `stats-demo-390.png`。
+浏览器检查需要 Playwright（项目根目录的 `node_modules` 已包含），优先使用本机已安装的 Chrome，没有时退回 Playwright 自带 Chromium；截图输出到 `docs/screenshots/stats-demo-375.png` 和 `stats-demo-390.png`。它不依赖 `node --test`，因为在受限环境里测试子进程的管道会让浏览器启动卡住。
 
 ## 云端同步
 
@@ -53,7 +58,13 @@ node sites/wechat-stats-demo/scripts/build.mjs
 
 ```powershell
 $env:TINYWEBDB_USER='账号'; $env:TINYWEBDB_KEY='密钥'
-node sites/wechat-stats-demo/scripts/verify-live-cloud.mjs
+node scripts/verify-live-cloud.mjs
+```
+
+本机直连 `tinywebdb.appinventor.space` 不稳定，必要时让 Node 走本机代理：
+
+```powershell
+$env:NODE_USE_ENV_PROXY='1'; $env:HTTPS_PROXY='http://127.0.0.1:端口'
 ```
 
 ## 目录结构
