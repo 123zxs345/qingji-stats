@@ -66,11 +66,26 @@ $env:TINYWEBDB_USER='账号'; $env:TINYWEBDB_KEY='密钥'
 node scripts/verify-live-cloud.mjs
 ```
 
+线上端到端验证（打开已发布的公开地址，真实浏览器连真实数据库，验证完清理测试记录）：
+
+```powershell
+node scripts/verify-live-site.mjs
+```
+
 本机直连 `tinywebdb.appinventor.space` 不稳定，必要时让 Node 走本机代理：
 
 ```powershell
 $env:NODE_USE_ENV_PROXY='1'; $env:HTTPS_PROXY='http://127.0.0.1:端口'
 ```
+
+## 已发布
+
+| 项目 | 地址 |
+| --- | --- |
+| 公开入口 | <https://123zxs345.github.io/qingji-stats/> |
+| 源码仓库 | <https://github.com/123zxs345/qingji-stats> |
+
+发布与验证记录见 [轻记数字统计发布记录](../../docs/publishing/轻记数字统计发布记录.md)。
 
 ## 目录结构
 
